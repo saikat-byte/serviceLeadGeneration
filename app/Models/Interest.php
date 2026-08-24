@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\InterestStatus;
 use App\Enums\InterestActorType;
 use App\Traits\ManagesStateTransitions;
-use App\Enums\InterestStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,8 +16,8 @@ class Interest extends Model
     protected $guarded = ['id'];
 
     protected $casts = [
-        'actor_type' => InterestActorType::class,
         'status' => InterestStatus::class,
+        'actor_type' => InterestActorType::class,
         'expressed_at' => 'datetime',
     ];
 
@@ -31,12 +31,11 @@ class Interest extends Model
         return $this->belongsTo(User::class, 'provider_id');
     }
 
-
     public function allowedTransitions(): array
     {
         return [
-            'expressed' => ['active', 'withdrawn', 'rejected', 'expired', 'selected'],
-            'active'    => ['selected', 'rejected', 'expired'],
+            'active'    => ['selected', 'withdrawn', 'rejected', 'expired'],
+            'expressed' => ['active', 'withdrawn', 'expired'],
             'withdrawn' => [],
             'rejected'  => [],
             'expired'   => [],

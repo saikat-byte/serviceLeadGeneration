@@ -22,23 +22,17 @@ class Lead extends Model
         'converted_at' => 'datetime',
     ];
 
-
     public function allowedTransitions(): array
     {
         return [
+            // 'offered' ebong 'accepted' remove kora holo karon egulo MatchRecord er part
             'created'     => ['qualified', 'cancelled'],
             'qualified'   => ['matching', 'cancelled'],
             'matching'    => ['distributed', 'unfulfilled', 'cancelled'],
-            
-            // 👇 এখানে 'selected' এবং 'interested' যোগ করা হয়েছে
-            'distributed' => ['responding', 'interested', 'selected', 'expired', 'cancelled'], 
-            
+            'distributed' => ['responding', 'interested', 'selected', 'expired', 'cancelled'],
             'responding'  => ['interested', 'expired', 'unfulfilled', 'cancelled'],
             'interested'  => ['selected', 'expired', 'cancelled'],
-            'offered'     => ['accepted', 'rejected', 'expired'],
-            'accepted'    => ['selected', 'rejected'],
-            'selected'    => [],
-            'rejected'    => [],
+            'selected'    => ['converted', 'cancelled'], // converted add kora holo end state hisebe
             'expired'     => [],
             'converted'   => [],
             'cancelled'   => [],
@@ -53,7 +47,7 @@ class Lead extends Model
 
     public function matches(): HasMany
     {
-        return $this->hasMany(MatchRecord::class, 'lead_id'); // Match is a reserved keyword in PHP 8.0+, best to alias the class name
+        return $this->hasMany(MatchRecord::class, 'lead_id');
     }
 
     public function interests(): HasMany

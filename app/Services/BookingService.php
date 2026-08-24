@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Connection;
 use App\Models\Booking;
 use App\Enums\BookingStatus;
+use App\Enums\LeadStatus;
 use App\Events\BookingCreated;
 use App\Events\BookingConfirmed;
 use Illuminate\Support\Facades\DB;
@@ -42,7 +43,7 @@ class BookingService
 
             // 2. Transition State for Audit Trail
             $booking->transitionState(
-                newState: BookingStatus::PENDING, // Initiating the state log
+                newState: BookingStatus::PENDING,
                 eventName: 'BookingCreated',
                 actorId: $actorId,
                 reason: 'Booking initiated after connection established.'
@@ -67,6 +68,18 @@ class BookingService
                 actorId: $actorId,
                 reason: 'Booking terms agreed and confirmed.'
             );
+
+            // MISSING LOGIC ADDED: Lead ke finally CONVERTED mark kora holo
+            $lead = $booking->lead;
+            if ($lead && $lead->status->value !== LeadStatus::CONVERTED->value) {
+                $lead->transitionState(
+                    newState: LeadStatus::CONVERTED,
+                    eventName: 'LeadConverted',
+                    actorId: $actorId,
+                    reason: 'Booking confirmed, lead successfully converted.'
+                );
+                $lead->update(['converted_at' => now()]);
+            }
 
             // Once confirmed, a Service Job (field operation) is generated
             $this->jobService->createForBooking($booking, $actorId);

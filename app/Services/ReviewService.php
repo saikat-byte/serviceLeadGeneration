@@ -47,6 +47,7 @@ class ReviewService
                 'status'      => ReviewStatus::SUBMITTED,
             ]);
 
+            // Transition State (Duplicate removed)
             $review->transitionState(
                 newState: ReviewStatus::PUBLISHED,
                 eventName: 'ReviewPublished',
@@ -54,14 +55,7 @@ class ReviewService
                 reason: 'Review automatically published.'
             );
 
-            $review->transitionState(
-                newState: ReviewStatus::PUBLISHED,
-                eventName: 'ReviewPublished',
-                actorId: $reviewerId,
-                reason: 'Review automatically published.'
-            );
-
-            // 🟢 2. Recalculate Provider's Average Rating
+            // 2. Recalculate Provider's Average Rating
             $this->recalculateProviderRating($booking->provider_id);
 
             return $review;

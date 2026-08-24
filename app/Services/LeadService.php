@@ -24,10 +24,20 @@ class LeadService
     {
         return DB::transaction(function () use ($serviceRequest) {
             
+            // 'open' bad diye LeadStatus::CREATED Enum use kora holo
             $lead = Lead::create([
                 'service_request_id' => $serviceRequest->id,
-                'status'             => 'open',
+                'status'             => LeadStatus::CREATED,
             ]);
+
+            LeadCreated::dispatch($lead);
+
+            // Transition strictly state machine onujayi kora holo
+            $lead->transitionState(
+                newState: LeadStatus::QUALIFIED,
+                eventName: 'LeadQualified',
+                reason: 'Lead automatically qualified from service request.'
+            );
 
             $this->processMatching($lead);
 
@@ -86,7 +96,7 @@ class LeadService
             // Update individual match records to OFFERED
             $lead->matches()->each(function ($match) {
                 $match->transitionState(
-                    newState: MatchStatus::OFFERED,
+                    newState: MatchStatus::OFFERED, // Needs MatchStatus enum
                     eventName: 'MatchOffered',
                     reason: 'Opportunity offered to provider.'
                 );

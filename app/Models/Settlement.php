@@ -3,13 +3,15 @@
 namespace App\Models;
 
 use App\Enums\SettlementStatus;
+use App\Traits\ManagesStateTransitions;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Settlement extends Model
 {
-    use HasFactory;
+    // MISSING TRAIT ADDED
+    use HasFactory, ManagesStateTransitions;
 
     protected $guarded = ['id'];
 
@@ -29,5 +31,16 @@ class Settlement extends Model
     public function commission(): BelongsTo
     {
         return $this->belongsTo(Commission::class);
+    }
+
+    // MISSING STATE MACHINE LOGIC ADDED
+    public function allowedTransitions(): array
+    {
+        return [
+            'pending'    => ['processing', 'settled', 'failed'],
+            'processing' => ['settled', 'failed'],
+            'settled'    => [],
+            'failed'     => ['pending'],
+        ];
     }
 }

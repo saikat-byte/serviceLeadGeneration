@@ -16,7 +16,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements FilamentUser
 {
-  use HasApiTokens, HasFactory, Notifiable, HasRoles;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
     protected $guarded = ['id'];
 
@@ -41,23 +41,33 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(Location::class);
     }
 
-    public function providerProfile(): HasOne
+    public function providerProfile()
     {
-        return $this->hasOne(ProviderProfile::class);
+        return $this->hasOne(ProviderProfile::class, 'user_id');
     }
 
-    public function providerServices(): HasMany
+    public function providerServices()
     {
         return $this->hasMany(ProviderService::class, 'provider_id');
     }
 
-    public function providerServiceAreas(): HasMany
+    public function providerServiceAreas()
     {
         return $this->hasMany(ProviderServiceArea::class, 'provider_id');
+    }
+
+    public function providerSkills()
+    {
+        return $this->hasMany(ProviderSkill::class, 'provider_id');
+    }
+
+    public function providerAvailabilities()
+    {
+        return $this->hasMany(ProviderAvailability::class, 'provider_id');
     }
 
     public function canAccessPanel(Panel $panel): bool
     {
         return $this->hasAnyRole(array_column(\App\Enums\AdminRole::cases(), 'value'));
     }
-}   
+}
