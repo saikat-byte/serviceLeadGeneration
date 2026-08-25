@@ -30,7 +30,8 @@ class InvoicesTable
                     ->sortable(),
                 TextColumn::make('status')
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
+                    // FIX: string er bodole InvoiceStatus enum use kora holo ebong value access kora holo
+                    ->color(fn (\App\Enums\InvoiceStatus $state): string => match ($state->value) {
                         'paid' => 'success',
                         'issued', 'draft' => 'warning',
                         'cancelled', 'refunded' => 'danger',

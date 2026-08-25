@@ -45,14 +45,19 @@ return new class extends Migration {
             $table->foreignId('booking_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('complainant_id')->constrained('users')->restrictOnDelete();
             $table->foreignId('against_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->string('type')->default('service')->index();
             $table->string('category')->index();
+            $table->string('priority')->default('medium')->index();
             $table->text('description');
+            $table->json('evidence')->nullable();
             $table->enum('status', [
-                'created', 'acknowledged', 'under_review', 'action_required',
+                'created', 'acknowledged', 'under_review', 'investigating', 'action_required',
                 'resolved', 'closed', 'rejected', 'escalated'
             ])->default('created')->index();
             $table->text('resolution')->nullable();
+            $table->foreignId('resolved_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('resolved_at')->nullable();
+            $table->timestamp('closed_at')->nullable();
             $table->timestamps();
         });
 

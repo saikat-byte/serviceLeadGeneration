@@ -41,12 +41,22 @@ class SettlementResource extends Resource
             'index' => Pages\ListSettlements::route('/'),
             'create' => Pages\CreateSettlement::route('/create'),
             'view' => Pages\ViewSettlement::route('/{record}'),
-            'edit' => Pages\EditSettlement::route('/{record}/edit'),
+            // Edit route removed as we are making it action-based
         ];
     }
 
     public static function canCreate(): bool
     {
         return false; // Settlements auto-calculated hoy, tai manual create bondho thakbe
+    }
+
+    public static function canEdit($record): bool
+    {
+        return false; // Direct edit bondho, action diye update hobe
+    }
+
+    public static function canDelete($record): bool
+    {
+        return false; // Financial records delete kora jabe na
     }
 }

@@ -4,6 +4,7 @@ namespace App\Enums;
 
 enum ComplaintType: string
 {
+    case SERVICE = 'service';
     case PROVIDER_NO_SHOW = 'provider_no_show';
     case POOR_SERVICE = 'poor_service';
     case LATE_ARRIVAL = 'late_arrival';

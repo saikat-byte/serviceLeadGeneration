@@ -7,10 +7,10 @@ use App\Traits\ManagesStateTransitions;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Settlement extends Model
 {
-    // MISSING TRAIT ADDED
     use HasFactory, ManagesStateTransitions;
 
     protected $guarded = ['id'];
@@ -28,12 +28,12 @@ class Settlement extends Model
         return $this->belongsTo(User::class, 'provider_id');
     }
 
-    public function commission(): BelongsTo
+    // CHANGED: Settlement ekhon multiple commission hold korbe
+    public function commissions(): HasMany
     {
-        return $this->belongsTo(Commission::class);
+        return $this->hasMany(Commission::class);
     }
 
-    // MISSING STATE MACHINE LOGIC ADDED
     public function allowedTransitions(): array
     {
         return [

@@ -52,4 +52,9 @@ class TransactionResource extends Resource
     {
         return false; // Immutable audit log, editing disabled
     }
+
+    public static function canDelete($record): bool
+    {
+        return false; // Deletion is absolutely forbidden for ledger records
+    }
 }

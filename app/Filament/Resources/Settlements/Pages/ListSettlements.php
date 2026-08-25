@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\Settlements\Pages;
 
 use App\Filament\Resources\Settlements\SettlementResource;
-use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 
 class ListSettlements extends ListRecords
@@ -12,8 +11,7 @@ class ListSettlements extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [
-            CreateAction::make(),
-        ];
+        // Removed CreateAction to make it Read-Only
+        return [];
     }
 }

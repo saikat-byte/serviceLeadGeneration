@@ -1,15 +1,15 @@
 <?php
 
-namespace App\Filament\Resources\Settlements\Pages;
+namespace App\Filament\Resources\ServiceJobs\Pages;
 
-use App\Filament\Resources\Settlements\SettlementResource;
+use App\Filament\Resources\ServiceJobs\ServiceJobResource;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
 
-class EditSettlement extends EditRecord
+class EditServiceJob extends EditRecord
 {
-    protected static string $resource = SettlementResource::class;
+    protected static string $resource = ServiceJobResource::class;
 
     protected function getHeaderActions(): array
     {

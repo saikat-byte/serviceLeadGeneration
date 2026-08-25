@@ -40,7 +40,6 @@ class CommissionResource extends Resource
         return [
             'index' => Pages\ListCommissions::route('/'),
             'view' => Pages\ViewCommission::route('/{record}'),
-            // 'edit' => Pages\EditCommission::route('/{record}/edit'), // 🟢 Edit route ti comment ba remove kore din
         ];
     }
 
@@ -52,5 +51,10 @@ class CommissionResource extends Resource
     public static function canEdit($record): bool
     {
         return false;
+    }
+
+    public static function canDelete($record): bool
+    {
+        return false; // Added to strictly prevent deletion
     }
 }

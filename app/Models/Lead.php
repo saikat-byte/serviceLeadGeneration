@@ -25,17 +25,16 @@ class Lead extends Model
     public function allowedTransitions(): array
     {
         return [
-            // 'offered' ebong 'accepted' remove kora holo karon egulo MatchRecord er part
-            'created'     => ['qualified', 'cancelled'],
-            'qualified'   => ['matching', 'cancelled'],
-            'matching'    => ['distributed', 'unfulfilled', 'cancelled'],
-            'distributed' => ['responding', 'interested', 'selected', 'expired', 'cancelled'],
-            'responding'  => ['interested', 'expired', 'unfulfilled', 'cancelled'],
-            'interested'  => ['selected', 'expired', 'cancelled'],
-            'selected'    => ['converted', 'cancelled'], // converted add kora holo end state hisebe
-            'expired'     => [],
-            'converted'   => [],
-            'cancelled'   => [],
+            'created' => ['qualified', 'cancelled'],
+            'qualified' => ['matching', 'cancelled'],
+            'matching' => ['distributed', 'unfulfilled', 'cancelled'],
+            'distributed' => ['responding', 'interested', 'selected', 'converted', 'expired', 'cancelled'], // converted added as failsafe
+            'responding' => ['interested', 'expired', 'unfulfilled', 'cancelled'],
+            'interested' => ['selected', 'converted', 'expired', 'cancelled'], // converted added here
+            'selected' => ['converted', 'cancelled'],
+            'expired' => [],
+            'converted' => [],
+            'cancelled' => [],
             'unfulfilled' => [],
         ];
     }

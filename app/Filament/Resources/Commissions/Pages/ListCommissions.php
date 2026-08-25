@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\Commissions\Pages;
 
 use App\Filament\Resources\Commissions\CommissionResource;
-use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 
 class ListCommissions extends ListRecords
@@ -12,8 +11,7 @@ class ListCommissions extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [
-            CreateAction::make(),
-        ];
+        // Removed CreateAction to enforce strictly Read-Only Ledger
+        return [];
     }
 }

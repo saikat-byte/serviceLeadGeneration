@@ -87,4 +87,40 @@ class BookingService
             BookingConfirmed::dispatch($booking);
         });
     }
+
+
+    /**
+    * Cancel the booking and record cancellation details.
+    */
+    public function cancel(Booking $booking, int $actorId, string $reason, float $fee = 0.00): void
+    {
+        DB::transaction(function () use ($booking, $actorId, $reason, $fee) {
+            
+            // 1. Transition Booking state to cancelled
+            $booking->transitionState(
+                newState: BookingStatus::CANCELLED,
+                eventName: 'BookingCancelled',
+                actorId: $actorId,
+                reason: $reason
+            );
+
+            // 2. Create Cancellation Record
+            \App\Models\BookingCancellation::create([
+                'booking_id'   => $booking->id,
+                'cancelled_by' => $actorId,
+                'reason'       => $reason,
+                'fee'          => $fee,
+            ]);
+
+            // 3. If ServiceJob exists and not closed/completed, cancel it too
+            if ($booking->serviceJob && !in_array($booking->serviceJob->status->value, ['completed', 'closed', 'cancelled'])) {
+                $booking->serviceJob->transitionState(
+                    newState: \App\Enums\ServiceJobStatus::CANCELLED,
+                    eventName: 'JobCancelled',
+                    actorId: $actorId,
+                    reason: 'Associated booking was cancelled: ' . $reason
+                );
+            }
+        });
+    }
 }

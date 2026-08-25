@@ -8,7 +8,6 @@ use App\Traits\ManagesStateTransitions;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Commission extends Model
 {
@@ -40,17 +39,16 @@ class Commission extends Model
         return $this->belongsTo(User::class, 'provider_id');
     }
 
-    public function settlement(): HasOne
+    // CHANGED: Commission belongs to a Settlement
+    public function settlement(): BelongsTo
     {
-        return $this->hasOne(Settlement::class);
+        return $this->belongsTo(Settlement::class);
     }
 
-
-public function allowedTransitions(): array
+    public function allowedTransitions(): array
     {
         return [
             'pending'    => ['calculated', 'earned', 'adjusted', 'reversed'], 
-            
             'calculated' => ['earned', 'adjusted', 'reversed'],
             'earned'     => ['settled', 'adjusted', 'reversed'],
             'adjusted'   => ['earned', 'reversed'],

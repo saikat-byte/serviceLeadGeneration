@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Filament\Resources;
+namespace App\Filament\Resources\Bookings;
 
-use App\Filament\Resources\BookingResource\Pages;
+use App\Filament\Resources\Bookings\Pages;
 use App\Filament\Resources\Bookings\Schemas\BookingForm;
 use App\Filament\Resources\Bookings\Tables\BookingsTable;
 use App\Models\Booking;
@@ -20,7 +20,7 @@ class BookingResource extends Resource
 
     public static function canCreate(): bool
     {
-        return false; // Bookings auto-generate hoy connection theke
+        return false;
     }
 
     public static function form(Schema $schema): Schema

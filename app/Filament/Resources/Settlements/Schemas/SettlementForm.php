@@ -14,16 +14,12 @@ class SettlementForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->schema([
-            Section::make('Provider & Commission Info')->schema([
+            Section::make('Provider Info')->schema([
                 Select::make('provider_id')
                     ->relationship('provider', 'name')
                     ->label('Provider')
                     ->disabled(),
-                Select::make('commission_id')
-                    ->relationship('commission', 'id')
-                    ->label('Commission ID')
-                    ->disabled(),
-            ])->columns(2),
+            ])->columns(1), // Ekta field, tai column 1 kora holo
 
             Section::make('Financial Breakdown')->schema([
                 TextInput::make('gross_amount')

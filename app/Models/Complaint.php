@@ -30,9 +30,10 @@ class Complaint extends Model
         return [
             'created'         => ['acknowledged', 'under_review', 'rejected', 'closed'],
             'acknowledged'    => ['under_review', 'rejected', 'closed'],
-            'under_review'    => ['investigating', 'resolved', 'rejected', 'closed'],
-            'investigating'   => ['action_required', 'resolved', 'rejected', 'closed'],
-            'action_required' => ['resolved', 'closed'],
+            'under_review'    => ['investigating', 'resolved', 'rejected', 'closed', 'escalated'],
+            'investigating'   => ['action_required', 'resolved', 'rejected', 'closed', 'escalated'],
+            'action_required' => ['resolved', 'closed', 'escalated'],
+            'escalated'       => ['investigating', 'resolved', 'closed'],
             'resolved'        => ['closed'],
             'rejected'        => ['closed'],
             'closed'          => [],

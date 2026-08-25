@@ -3,8 +3,10 @@
 namespace App\Filament\Resources\Settlements\Tables;
 
 use App\Enums\SettlementStatus;
-use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
+use App\Models\Settlement;
+use Filament\Forms\Components\TextInput;
+use Filament\Actions\Action; 
+use Filament\Actions\ViewAction; 
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -57,7 +59,28 @@ class SettlementsTable
             ])
             ->actions([
                 ViewAction::make(),
-                EditAction::make(),
+                Action::make('processPayout')
+                    ->label('Process Payout')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->visible(fn (Settlement $record): bool => $record->status?->value !== 'settled')
+                    ->form([
+                        TextInput::make('payout_reference')
+                            ->label('UTR / Bank Reference')
+                            ->required()
+                            ->maxLength(255)
+                            ->helperText('Bank ba Gateway theke paoa successful transaction ID ekhane din.'),
+                    ])
+                    ->action(function (array $data, Settlement $record): void {
+                        $record->update([
+                            'status' => 'settled',
+                            'payout_reference' => $data['payout_reference'],
+                            'settled_at' => now(),
+                        ]);
+                    })
+                    ->requiresConfirmation()
+                    ->modalHeading('Process Settlement Payout')
+                    ->modalDescription('Provider k taka pathanor por ei form ti puron korun. Eta click korar por status "Settled" hoye jabe.'),
             ]);
     }
 }
