@@ -104,7 +104,12 @@ class ReviewResource extends Resource
                     ->modalHeading('Flag Review')
                     ->modalDescription('Apni ki ei review ta flag korte chan? Eta pore investigate kora hobe.')
                     ->action(function (Review $record): void {
-                        $record->update(['status' => 'flagged']);
+                        $record->transitionState(
+                            newState: 'flagged',
+                            eventName: 'ReviewFlagged',
+                            actorId: auth()->id(),
+                            reason: 'Flagged via Admin moderation'
+                        );
                     }),
 
                 Action::make('remove')
@@ -116,7 +121,12 @@ class ReviewResource extends Resource
                     ->modalHeading('Remove Review')
                     ->modalDescription('Ei review ta ki platform theke remove korte chan? Eta ar public thakbe na.')
                     ->action(function (Review $record): void {
-                        $record->update(['status' => 'removed']);
+                        $record->transitionState(
+                            newState: 'removed',
+                            eventName: 'ReviewRemoved',
+                            actorId: auth()->id(),
+                            reason: 'Removed by Admin'
+                        );
                     }),
 
                 Action::make('publish')
@@ -128,7 +138,12 @@ class ReviewResource extends Resource
                     ->modalHeading('Publish Review')
                     ->modalDescription('Ei review ta ki abar platform e publish korte chan?')
                     ->action(function (Review $record): void {
-                        $record->update(['status' => 'published']);
+                        $record->transitionState(
+                            newState: 'published',
+                            eventName: 'ReviewPublished',
+                            actorId: auth()->id(),
+                            reason: 'Published/Restored by Admin'
+                        );
                     }),
             ]);
     }

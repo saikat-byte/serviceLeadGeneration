@@ -23,12 +23,17 @@ class ReviewService
                 throw new Exception('Reviews can only be submitted for completed jobs.');
             }
 
-            // Rule 2: Check if reviewer is the booking customer
-            if ($booking->customer_id !== $reviewerId) {
-                throw new Exception('Unauthorized. Only the booking customer can review this job.');
+            // Rule 2: Check participant roles
+            $isCustomer = $booking->customer_id === $reviewerId;
+            $isProvider = $booking->provider_id === $reviewerId;
+
+            if (!$isCustomer && !$isProvider) {
+                throw new Exception('Unauthorized. Only booking participants can submit a review.');
             }
 
-            // Rule 3: Check duplicate review
+            $revieweeId = $isCustomer ? $booking->provider_id : $booking->customer_id;
+
+            // Rule 3: Check duplicate review from the same actor
             $existingReview = Review::where('booking_id', $booking->id)
                 ->where('reviewer_id', $reviewerId)
                 ->exists();
@@ -41,22 +46,21 @@ class ReviewService
             $review = Review::create([
                 'booking_id'  => $booking->id,
                 'reviewer_id' => $reviewerId,
-                'reviewee_id' => $booking->provider_id,
+                'reviewee_id' => $revieweeId,
                 'rating'      => $data['rating'],
                 'comment'     => $data['comment'] ?? null,
-                'status'      => ReviewStatus::SUBMITTED,
+                'status'      => ReviewStatus::SUBMITTED->value,
             ]);
 
-            // Transition State (Duplicate removed)
+            // Transition State (Auto-publish) - This will trigger ReviewPublished event
             $review->transitionState(
-                newState: ReviewStatus::PUBLISHED,
-                eventName: 'ReviewPublished',
+                newState: ReviewStatus::PUBLISHED->value,
+                eventName: 'App\Events\ReviewPublished',
                 actorId: $reviewerId,
                 reason: 'Review automatically published.'
             );
 
-            // 2. Recalculate Provider's Average Rating
-            $this->recalculateProviderRating($booking->provider_id);
+            // Removed direct calculation here. Listener will handle it.
 
             return $review;
         });
@@ -65,14 +69,15 @@ class ReviewService
     /**
      * Recalculate and update provider average rating.
      */
-    protected function recalculateProviderRating(int $providerId): void
+    public function recalculateProviderRating(int $providerId): void
     {
+        // Average is calculated based on PUBLISHED reviews only
         $averageRating = Review::where('reviewee_id', $providerId)
-            ->where('status', ReviewStatus::PUBLISHED)
+            ->where('status', ReviewStatus::PUBLISHED->value)
             ->avg('rating');
 
         ProviderProfile::where('user_id', $providerId)->update([
-            'rating_average' => round($averageRating, 2),
+            'rating_average' => round((float) $averageRating, 2),
         ]);
     }
 }
