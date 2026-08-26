@@ -4,10 +4,12 @@ namespace App\Filament\Resources\Settlements\Tables;
 
 use App\Enums\SettlementStatus;
 use App\Models\Settlement;
+use Filament\Actions\Action;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\TextInput;
-use Filament\Actions\Action; 
-use Filament\Actions\ViewAction; 
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class SettlementsTable
@@ -39,9 +41,9 @@ class SettlementsTable
                 TextColumn::make('status')
                     ->badge()
                     ->formatStateUsing(fn (?SettlementStatus $state): string => 
-                        $state ? str($state->value)->title() : '—'
+                        $state ? str($state->value ?? $state)->title() : '—'
                     )
-                    ->color(fn (?SettlementStatus $state): string => match ($state?->value) {
+                    ->color(fn (?SettlementStatus $state): string => match ($state?->value ?? $state) {
                         'settled' => 'success',
                         'pending', 'eligible', 'processing' => 'warning',
                         'failed', 'reversed' => 'danger',
@@ -55,7 +57,16 @@ class SettlementsTable
                     ->sortable(),
             ])
             ->filters([
-                //
+                // FIX: Added Operational Status Filter
+                SelectFilter::make('status')
+                    ->label('Filter by Status')
+                    ->options([
+                        'pending' => 'Pending',
+                        'eligible' => 'Eligible',
+                        'processing' => 'Processing',
+                        'settled' => 'Settled',
+                        'failed' => 'Failed',
+                    ]),
             ])
             ->actions([
                 ViewAction::make(),
@@ -63,7 +74,9 @@ class SettlementsTable
                     ->label('Process Payout')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
-                    ->visible(fn (Settlement $record): bool => $record->status?->value !== 'settled')
+                   ->visible(fn (Settlement $record): bool => 
+                        (is_object($record->status) ? $record->status->value : $record->status) !== 'settled'
+                    )
                     ->form([
                         TextInput::make('payout_reference')
                             ->label('UTR / Bank Reference')
@@ -77,6 +90,12 @@ class SettlementsTable
                             'payout_reference' => $data['payout_reference'],
                             'settled_at' => now(),
                         ]);
+
+                        Notification::make()
+                            ->title('Settlement Processed')
+                            ->body('Payout has been successfully marked as settled.')
+                            ->success()
+                            ->send();
                     })
                     ->requiresConfirmation()
                     ->modalHeading('Process Settlement Payout')

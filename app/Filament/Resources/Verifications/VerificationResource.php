@@ -5,16 +5,18 @@ namespace App\Filament\Resources\Verifications;
 use App\Enums\VerificationStatus;
 use App\Filament\Resources\Verifications\Pages;
 use App\Models\Verification;
-use Filament\Actions\Action;
-use Filament\Actions\ViewAction;
+use Filament\Actions\ViewAction as PageViewAction; // Avoid naming conflict
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Tables\Actions\Action;
+use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Filament\Notifications\Notification;
 
 class VerificationResource extends Resource
 {
@@ -71,9 +73,9 @@ class VerificationResource extends Resource
                 TextColumn::make('status')
                     ->badge()
                     ->formatStateUsing(fn (?VerificationStatus $state): string => 
-                        $state ? str($state->value)->title() : '—'
+                        $state ? str($state->value ?? $state)->title() : '—'
                     )
-                    ->color(fn (?VerificationStatus $state): string => match ($state?->value) {
+                    ->color(fn (?VerificationStatus $state): string => match ($state?->value ?? $state) {
                         'verified' => 'success',
                         'pending', 'submitted', 'under_review' => 'warning',
                         'rejected', 'expired', 'suspended' => 'danger',
@@ -84,7 +86,16 @@ class VerificationResource extends Resource
                     ->sortable(),
             ])
             ->filters([
-                // 
+                // FIX: Added Operational Queue Filter
+                SelectFilter::make('status')
+                    ->label('Filter by Status')
+                    ->options([
+                        'pending' => 'Pending',
+                        'submitted' => 'Submitted',
+                        'under_review' => 'Under Review',
+                        'verified' => 'Verified',
+                        'rejected' => 'Rejected',
+                    ]),
             ])
             ->actions([
                 ViewAction::make(),
@@ -103,6 +114,13 @@ class VerificationResource extends Resource
                             'verified_at' => now(),
                             'rejection_reason' => null,
                         ]);
+                        
+                        // FIX: Added Notification for Admin
+                        Notification::make()
+                            ->title('Document Verified')
+                            ->body('The provider document has been successfully verified.')
+                            ->success()
+                            ->send();
                     }),
 
                 Action::make('reject')
@@ -111,7 +129,7 @@ class VerificationResource extends Resource
                     ->color('danger')
                     ->visible(fn (Verification $record): bool => !in_array($record->status?->value ?? $record->status, ['rejected']))
                     ->form([
-                        Textarea::make('rejection_reason')
+                        \Filament\Forms\Components\Textarea::make('rejection_reason')
                             ->label('Reason for Rejection')
                             ->required()
                             ->helperText('User ke ki karone reject kora hocche seta janiye din.'),
@@ -122,6 +140,13 @@ class VerificationResource extends Resource
                             'rejection_reason' => $data['rejection_reason'],
                             'verified_at' => null,
                         ]);
+
+                        // FIX: Added Notification for Admin
+                        Notification::make()
+                            ->title('Document Rejected')
+                            ->body('The document has been rejected and reason saved.')
+                            ->danger()
+                            ->send();
                     })
                     ->requiresConfirmation(),
             ]);
@@ -137,16 +162,16 @@ class VerificationResource extends Resource
 
     public static function canCreate(): bool
     {
-        return false; // Verifications are created by users uploading docs
+        return false;
     }
 
     public static function canEdit($record): bool
     {
-        return false; // Direct edit is blocked, must use Actions
+        return false;
     }
 
     public static function canDelete($record): bool
     {
-        return false; // Audit logs should never be deleted
+        return false; 
     }
 }

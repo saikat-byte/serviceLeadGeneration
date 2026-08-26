@@ -6,15 +6,18 @@ use App\Enums\ComplaintPriority;
 use App\Enums\ComplaintStatus;
 use App\Filament\Resources\Complaints\Pages;
 use App\Models\Complaint;
-use Filament\Actions\Action;
-use Filament\Actions\ViewAction;
+use Filament\Actions\ViewAction as PageViewAction; 
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Tables\Actions\Action;
+use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Filament\Notifications\Notification;
 
 class ComplaintResource extends Resource
 {
@@ -39,7 +42,7 @@ class ComplaintResource extends Resource
                         'urgent' => 'Urgent',
                     ])->disabled(),
                 Textarea::make('description')->columnSpanFull()->disabled(),
-                Textarea::make('resolution')->columnSpanFull(),
+                Textarea::make('resolution')->columnSpanFull()->disabled(),
             ]);
     }
 
@@ -54,6 +57,7 @@ class ComplaintResource extends Resource
                 TextColumn::make('category')->searchable()->sortable(),
                 TextColumn::make('priority')
                     ->badge()
+                    ->formatStateUsing(fn ($state) => ucfirst($state?->value ?? $state))
                     ->color(fn ($state): string => match ($state?->value ?? $state) {
                         'urgent', 'high' => 'danger',
                         'medium' => 'warning',
@@ -61,6 +65,7 @@ class ComplaintResource extends Resource
                     }),
                 TextColumn::make('status')
                     ->badge()
+                    ->formatStateUsing(fn ($state) => ucfirst(str_replace('_', ' ', $state?->value ?? $state)))
                     ->color(fn ($state): string => match ($state?->value ?? $state) {
                         'resolved', 'closed' => 'success',
                         'under_review', 'investigating' => 'warning',
@@ -69,8 +74,29 @@ class ComplaintResource extends Resource
                     }),
                 TextColumn::make('created_at')->dateTime()->sortable(),
             ])
+            ->filters([
+                // FIX: Added Operational Status Filter
+                SelectFilter::make('status')
+                    ->label('Filter by Status')
+                    ->options([
+                        'pending' => 'Pending',
+                        'investigating' => 'Investigating',
+                        'resolved' => 'Resolved',
+                        'closed' => 'Closed',
+                    ]),
+                // FIX: Added Operational Priority Filter to spot Urgent issues quickly
+                SelectFilter::make('priority')
+                    ->label('Filter by Priority')
+                    ->options([
+                        'urgent' => 'Urgent',
+                        'high' => 'High',
+                        'medium' => 'Medium',
+                        'low' => 'Low',
+                    ]),
+            ])
             ->actions([
                 ViewAction::make(),
+                
                 Action::make('resolveComplaint')
                     ->label('Resolve')
                     ->icon('heroicon-o-check-badge')
@@ -89,6 +115,13 @@ class ComplaintResource extends Resource
                             'resolved_by' => auth()->id(),
                             'resolved_at' => now(),
                         ]);
+
+                        // FIX: Added Notification for Admin
+                        Notification::make()
+                            ->title('Complaint Resolved')
+                            ->body('The dispute has been marked as resolved.')
+                            ->success()
+                            ->send();
                     })
                     ->requiresConfirmation(),
             ]);
@@ -104,12 +137,12 @@ class ComplaintResource extends Resource
 
     public static function canCreate(): bool
     {
-        return false; // Complaints user/system theke generate hoy, admin theke manually banate hobe na
+        return false;
     }
 
     public static function canEdit($record): bool
     {
-        return false; // Strict secure update via Actions only
+        return false;
     }
 
     public static function canDelete($record): bool

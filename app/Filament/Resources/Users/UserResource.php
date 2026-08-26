@@ -4,13 +4,13 @@ namespace App\Filament\Resources\Users;
 
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
-use App\Filament\Resources\Users\Pages; 
+use App\Filament\Resources\Users\Pages;
 use App\Models\TrustProfile;
 use App\Models\User;
 use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
@@ -24,6 +24,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Collection;
 
 class UserResource extends Resource
 {
@@ -39,10 +40,11 @@ class UserResource extends Resource
                 ->label('Profile Photo')
                 ->image()
                 ->disk('public')
-                ->directory('users/avatars') 
+                ->directory('users/avatars')
                 ->imageEditor()
                 ->imageCropAspectRatio('1:1')
                 ->maxSize(6000)
+                ->live() // FIX: Chobi upload korar sathe sathei jate live preview hoy
                 ->columnSpanFull(),
 
             TextInput::make('name')
@@ -62,11 +64,11 @@ class UserResource extends Resource
                 ->maxLength(20),
 
             TextInput::make('password')
-                ->label(fn (string $operation): string => $operation === 'edit' ? 'New Password (leave blank to keep current)' : 'Password')
+                ->label(fn(string $operation): string => $operation === 'edit' ? 'New Password (leave blank to keep current)' : 'Password')
                 ->password()
                 ->revealable()
-                ->required(fn (string $operation): bool => $operation === 'create')
-                ->dehydrated(fn (?string $state): bool => filled($state))
+                ->required(fn(string $operation): bool => $operation === 'create')
+                ->dehydrated(fn(?string $state): bool => filled($state))
                 ->maxLength(255),
 
             Select::make('role')
@@ -78,6 +80,12 @@ class UserResource extends Resource
                 ->label('Account Status')
                 ->options(UserStatus::class)
                 ->required(),
+
+            Textarea::make('suspension_reason')
+                ->label('Suspension/Block Reason')
+                ->disabled()
+                ->columnSpanFull()
+                ->visible(fn($record) => $record && in_array($record->status?->value ?? $record->status, ['suspended', 'blocked'])),
         ]);
     }
 
@@ -99,8 +107,8 @@ class UserResource extends Resource
                 TextColumn::make('role')
                     ->label('Role')
                     ->badge()
-                    ->formatStateUsing(fn (?UserRole $state): string => $state ? str($state->value)->replace('_', ' ')->title() : '—')
-                    ->color(fn (?UserRole $state): string => match ($state?->value) {
+                    ->formatStateUsing(fn(?UserRole $state): string => $state ? str($state->value ?? $state)->replace('_', ' ')->title() : '—')
+                    ->color(fn(?UserRole $state): string => match ($state?->value ?? $state) {
                         'customer' => 'info',
                         'provider' => 'success',
                         'admin' => 'danger',
@@ -110,8 +118,8 @@ class UserResource extends Resource
                 TextColumn::make('status')
                     ->label('Status')
                     ->badge()
-                    ->formatStateUsing(fn (?UserStatus $state): string => $state ? str($state->value)->replace('_', ' ')->title() : '—')
-                    ->color(fn (?UserStatus $state): string => match ($state?->value) {
+                    ->formatStateUsing(fn(?UserStatus $state): string => $state ? str($state->value ?? $state)->replace('_', ' ')->title() : '—')
+                    ->color(fn(?UserStatus $state): string => match ($state?->value ?? $state) {
                         'registered', 'active' => 'success',
                         'profile_incomplete' => 'warning',
                         'suspended', 'blocked' => 'danger',
@@ -154,7 +162,7 @@ class UserResource extends Resource
                     ->label('Suspend')
                     ->icon('heroicon-o-no-symbol')
                     ->color('danger')
-                    ->visible(fn (User $record): bool => in_array($record->status?->value ?? $record->status, ['registered', 'active', 'profile_incomplete']))
+                    ->visible(fn(User $record): bool => in_array($record->status?->value ?? $record->status, ['registered', 'active', 'profile_incomplete']))
                     ->form([
                         Select::make('new_status')
                             ->label('Action Type')
@@ -169,7 +177,10 @@ class UserResource extends Resource
                             ->helperText('Ei reason ti internal audit er jonno save kora hobe.'),
                     ])
                     ->action(function (array $data, User $record): void {
-                        $record->update(['status' => $data['new_status']]);
+                        $record->update([
+                            'status' => $data['new_status'],
+                            'suspension_reason' => $data['reason']
+                        ]);
                         Notification::make()->title("User successfully {$data['new_status']}")->success()->send();
                     })
                     ->requiresConfirmation()
@@ -179,20 +190,24 @@ class UserResource extends Resource
                     ->label('Restore Access')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
-                    ->visible(fn (User $record): bool => in_array($record->status?->value ?? $record->status, ['suspended', 'blocked']))
+                    ->visible(fn(User $record): bool => in_array($record->status?->value ?? $record->status, ['suspended', 'blocked']))
                     ->requiresConfirmation()
                     ->modalHeading('Restore User')
                     ->action(function (User $record): void {
-                        $record->update(['status' => 'active']);
+                        $record->update([
+                            'status' => 'active',
+                            'suspension_reason' => null
+                        ]);
                         Notification::make()->title("User access restored")->success()->send();
                     }),
 
-                EditAction::make(), 
-                
+                EditAction::make(),
+
                 DeleteAction::make()
                     ->action(function ($record, $action) {
                         try {
                             $record->delete();
+                            Notification::make()->title('User deleted')->success()->send();
                         } catch (QueryException $e) {
                             if ($e->getCode() === '23000') {
                                 Notification::make()
@@ -209,10 +224,41 @@ class UserResource extends Resource
             ])
             ->bulkActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make()
+                    BulkAction::make('bulkSuspend')
+                        ->label('Suspend Selected')
+                        ->icon('heroicon-o-no-symbol')
+                        ->color('danger')
                         ->requiresConfirmation()
-                        ->modalHeading('Delete Selected Users'),
+                        ->action(function (Collection $records): void {
+                            $records->each(function (User $user) {
+                                if (in_array($user->status?->value ?? $user->status, ['registered', 'active', 'profile_incomplete'])) {
+                                    $user->update([
+                                        'status' => 'suspended',
+                                        'suspension_reason' => 'Bulk suspended by Administrator.'
+                                    ]);
+                                }
+                            });
+                            Notification::make()->title('Selected users suspended')->success()->send();
+                        }),
                 ]),
+
+                BulkAction::make('bulkRestore')
+                    ->label('Restore Selected')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->action(function (Collection $records): void {
+                        $records->each(function (User $user) {
+                            if (in_array($user->status?->value ?? $user->status, ['suspended', 'blocked'])) {
+                                $user->update([
+                                    'status' => 'active',
+                                    'suspension_reason' => null
+                                ]);
+                            }
+                        });
+                        Notification::make()->title('Selected users access restored')->success()->send();
+                    }),
+
             ]);
     }
 

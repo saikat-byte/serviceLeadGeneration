@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\ServiceRequests\Schemas;
 
 use App\Enums\ServiceRequestStatus;
+use App\Models\ServiceRequest;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
@@ -20,7 +21,8 @@ class ServiceRequestForm
                 ->relationship('customer', 'name')
                 ->required()
                 ->searchable()
-                ->preload(),
+                ->preload()
+                ->live(),
 
             Select::make('service_id')
                 ->label('Service Requested')
@@ -35,16 +37,40 @@ class ServiceRequestForm
                 ->default('draft')
                 ->required(),
 
+            // FIX: Removed unnecessary formatting that was breaking the View page
             DateTimePicker::make('preferred_at')
                 ->label('Preferred Date & Time'),
+                
+            // FIX: Perfected visibility logic
+            Textarea::make('cancellation_reason')
+                ->label('Cancellation Reason')
+                ->disabled()
+                ->columnSpanFull()
+                ->visible(fn (?ServiceRequest $record): bool => 
+                    $record !== null && 
+                    in_array($record->status?->value ?? $record->status, ['cancelled', 'rejected'])
+                ),
 
-            Select::make('location_id')
+          Select::make('location_id')
                 ->label('Service Location')
-                ->relationship('location', 'label')
+                ->relationship('location', 'label', function (\Illuminate\Database\Eloquent\Builder $query, $get) {
+                    $customerId = $get('customer_id');
+                    if ($customerId) {
+                        // NOTE: Jodi apnar locations table e customer er jonno 'customer_id' column thake, tahole nicher 'user_id' ta change kore 'customer_id' kore diben.
+                        $query->where('user_id', $customerId); 
+                    }
+                })
                 ->getOptionLabelFromRecordUsing(fn ($record) => $record->label . ($record->city ? ' (' . $record->city . ')' : ''))
                 ->searchable()
                 ->preload()
-                // Dropdown er pashei notun address toiri korar feature
+                // FIX: Sothik function use kora holo jeta nirdishto customer er sathe address link korbe
+                ->createOptionUsing(function (array $data, $get) {
+                    // Ekhan theke data create kora hobe 
+                    $data['user_id'] = $get('customer_id'); // Ekhaneo 'user_id' er bodole 'customer_id' dite paren jodi DB te tai thake
+                    
+                    // Location model call kore directly save kora hocche
+                    return \App\Models\Location::create($data)->id;
+                })
                 ->createOptionForm([
                     TextInput::make('label')
                         ->label('Address Label')
@@ -66,18 +92,15 @@ class ServiceRequestForm
                         ->label('PIN / Postal Code'),
                 ]),
 
-            // View korar somoy Full Address dekhanor Magic
             Placeholder::make('full_address')
                 ->label('Complete Address Details')
-                ->content(function ($record) {
-                    // Record ba location data na thakle blank dekhabe
+                ->content(function (?ServiceRequest $record) {
                     if (! $record || ! $record->location) {
                         return 'Address not available.';
                     }
                     
                     $loc = $record->location;
                     
-                    // Faka data gulo baad diye comma diye jure sundor vabe dekhano
                     return collect([
                         $loc->address, 
                         $loc->locality, 
@@ -86,7 +109,6 @@ class ServiceRequestForm
                         $loc->postal_code
                     ])->filter()->join(', ') ?: 'No detailed address provided.';
                 })
-                // Shudhumatro View page-e eta drisshoman hobe
                 ->visible(fn (string $operation): bool => $operation === 'view')
                 ->columnSpanFull(),
 
