@@ -7,6 +7,7 @@ namespace App\Policies;
 use Illuminate\Foundation\Auth\User as AuthUser;
 use App\Models\Verification;
 use Illuminate\Auth\Access\HandlesAuthorization;
+use App\Enums\UserRole;
 
 class VerificationPolicy
 {
@@ -14,21 +15,34 @@ class VerificationPolicy
     
     public function viewAny(AuthUser $authUser): bool
     {
+        // Users can view their own verification list
+        if (in_array($authUser->role, [UserRole::Customer, UserRole::Provider])) {
+            return true;
+        }
         return $authUser->can('ViewAny:Verification');
     }
 
     public function view(AuthUser $authUser, Verification $verification): bool
     {
+        // Users can only view their own verifications
+        if (in_array($authUser->role, [UserRole::Customer, UserRole::Provider])) {
+            return $authUser->id === $verification->user_id;
+        }
         return $authUser->can('View:Verification');
     }
 
     public function create(AuthUser $authUser): bool
     {
+        // Users can create/submit verification requests
+        if (in_array($authUser->role, [UserRole::Customer, UserRole::Provider])) {
+            return true;
+        }
         return $authUser->can('Create:Verification');
     }
 
     public function update(AuthUser $authUser, Verification $verification): bool
     {
+        // Normal users should not manually update verification statuses
         return $authUser->can('Update:Verification');
     }
 
@@ -71,5 +85,4 @@ class VerificationPolicy
     {
         return $authUser->can('Reorder:Verification');
     }
-
 }

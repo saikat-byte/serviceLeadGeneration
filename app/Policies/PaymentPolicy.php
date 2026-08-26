@@ -7,6 +7,7 @@ namespace App\Policies;
 use Illuminate\Foundation\Auth\User as AuthUser;
 use App\Models\Payment;
 use Illuminate\Auth\Access\HandlesAuthorization;
+use App\Enums\UserRole;
 
 class PaymentPolicy
 {
@@ -14,26 +15,39 @@ class PaymentPolicy
     
     public function viewAny(AuthUser $authUser): bool
     {
+        if ($authUser->role === UserRole::Customer) {
+            return true;
+        }
         return $authUser->can('ViewAny:Payment');
     }
 
     public function view(AuthUser $authUser, Payment $payment): bool
     {
+        // Only the customer who made the payment can view it
+        if ($authUser->role === UserRole::Customer) {
+            return $authUser->id === $payment->customer_id;
+        }
         return $authUser->can('View:Payment');
     }
 
     public function create(AuthUser $authUser): bool
     {
+        if ($authUser->role === UserRole::Customer) {
+            return true;
+        }
         return $authUser->can('Create:Payment');
     }
 
     public function update(AuthUser $authUser, Payment $payment): bool
     {
+        // NO normal user can manually update payment records.
+        // It must be done via PaymentService Webhooks.
         return $authUser->can('Update:Payment');
     }
 
     public function delete(AuthUser $authUser, Payment $payment): bool
     {
+        // Financial records must never be deleted by normal users
         return $authUser->can('Delete:Payment');
     }
 
@@ -71,5 +85,4 @@ class PaymentPolicy
     {
         return $authUser->can('Reorder:Payment');
     }
-
 }
