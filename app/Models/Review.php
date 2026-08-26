@@ -26,7 +26,7 @@ class Review extends Model
             'submitted' => ['published', 'flagged', 'removed'],
             'published' => ['flagged', 'removed'],
             'flagged'   => ['published', 'removed'],
-            'removed'   => [],
+            'removed'   => ['published'],
         ];
     }
 

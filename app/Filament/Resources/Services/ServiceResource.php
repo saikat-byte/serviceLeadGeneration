@@ -11,6 +11,7 @@ use App\Models\Service;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 
 class ServiceResource extends Resource
 {
@@ -43,5 +44,15 @@ class ServiceResource extends Resource
             'create' => CreateService::route('/create'),
             'edit' => EditService::route('/{record}/edit'),
         ];
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        // Check korchi ei service er kono active Booking ba Service Request ache kina
+        $hasBookings = \App\Models\Booking::where('service_id', $record->id)->exists();
+        $hasRequests = \App\Models\ServiceRequest::where('service_id', $record->id)->exists();
+
+        // Jodi kono ektao thake, tahole delete action false (hide/disable) hoye jabe
+        return ! ($hasBookings || $hasRequests);
     }
 }
