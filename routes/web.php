@@ -10,42 +10,72 @@ use App\Http\Controllers\Web\CustomerServiceRequestController;
 use App\Http\Controllers\Web\ProviderDashboardController;
 use App\Http\Controllers\Web\ProviderJobController;
 use App\Http\Controllers\Web\CustomerBookingController;
+use App\Http\Middleware\RoleMiddleware;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/services/{slug}', [ServiceController::class, 'show'])->name('services.show');
+Route::view('/how-it-works', 'pages.how-it-works')->name('how-it-works');
 
-// --- ADD THIS LOGIN ROUTE CATCHER ---
 Route::get('/login', function () {
     return redirect('/')->with('error', 'Please log in to access this page.');
 })->name('login');
-// ------------------------------------
 
 Route::get('/auth/google', [AuthController::class, 'redirectToGoogle'])->name('auth.google');
 Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+
 Route::middleware('auth')->group(function () {
     
-    // Customer Dashboard
-    Route::get('/dashboard', [CustomerDashboardController::class, 'index'])->name('dashboard');
-    Route::get('/locations/create', [LocationController::class, 'create'])->name('locations.create');
-    Route::post('/locations', [LocationController::class, 'store'])->name('locations.store');
-    
-    // Service Requests & Connections
-    Route::post('/service-requests', [CustomerServiceRequestController::class, 'store'])->name('service-requests.store');
-    Route::get('/service-requests/{serviceRequest}', [CustomerServiceRequestController::class, 'show'])->name('service-requests.show');
-    Route::post('/service-requests/{serviceRequest}/book/{provider}', [CustomerServiceRequestController::class, 'book'])->name('service-requests.book');
+    // ==========================================
+    // CUSTOMER ONLY ROUTES
+    // ==========================================
+    Route::middleware([\App\Http\Middleware\RoleMiddleware::class.':customer'])->group(function () {
+        Route::get('/dashboard', [\App\Http\Controllers\Web\CustomerDashboardController::class, 'index'])->name('dashboard');
+        
+        // Customer Profile
+        Route::get('/profile', [\App\Http\Controllers\Web\ProfileController::class, 'edit'])->name('customer.profile.edit');
+        Route::post('/profile', [\App\Http\Controllers\Web\ProfileController::class, 'update'])->name('customer.profile.update');
+        
+        // Customer Complaints
+        Route::get('/complaints', [\App\Http\Controllers\Web\ComplaintController::class, 'index'])->name('customer.complaints.index');
+        Route::get('/bookings/{booking}/complaints/create', [\App\Http\Controllers\Web\ComplaintController::class, 'create'])->name('customer.complaints.create');
+        Route::post('/bookings/{booking}/complaints', [\App\Http\Controllers\Web\ComplaintController::class, 'store'])->name('customer.complaints.store');
 
-    // Customer Bookings (Payment & Review)
-    Route::get('/bookings/{booking}', [CustomerBookingController::class, 'show'])->name('bookings.show');
-    Route::post('/bookings/{booking}/pay', [CustomerBookingController::class, 'pay'])->name('bookings.pay');
-    Route::post('/bookings/{booking}/review', [CustomerBookingController::class, 'review'])->name('bookings.review');
+        // Customer Other Routes
+        Route::get('/locations/create', [\App\Http\Controllers\Web\LocationController::class, 'create'])->name('locations.create');
+        Route::post('/locations', [\App\Http\Controllers\Web\LocationController::class, 'store'])->name('locations.store');
+        
+        Route::post('/service-requests', [\App\Http\Controllers\Web\CustomerServiceRequestController::class, 'store'])->name('service-requests.store');
+        Route::get('/service-requests/{serviceRequest}', [\App\Http\Controllers\Web\CustomerServiceRequestController::class, 'show'])->name('service-requests.show');
+        Route::post('/service-requests/{serviceRequest}/book/{provider}', [\App\Http\Controllers\Web\CustomerServiceRequestController::class, 'book'])->name('service-requests.book');
 
-    // Provider Dashboard & Jobs
-    Route::get('/provider/dashboard', [ProviderDashboardController::class, 'index'])->name('provider.dashboard');
-    Route::post('/provider/leads/{lead}/interest', [ProviderDashboardController::class, 'expressInterest'])->name('provider.leads.interest');
-    Route::post('/provider/jobs/{job}/start', [ProviderJobController::class, 'start'])->name('provider.jobs.start');
-    Route::post('/provider/jobs/{job}/complete', [ProviderJobController::class, 'complete'])->name('provider.jobs.complete');
+        Route::get('/bookings/{booking}', [\App\Http\Controllers\Web\CustomerBookingController::class, 'show'])->name('bookings.show');
+        Route::post('/bookings/{booking}/pay', [\App\Http\Controllers\Web\CustomerBookingController::class, 'pay'])->name('bookings.pay');
+        Route::post('/bookings/{booking}/review', [\App\Http\Controllers\Web\CustomerBookingController::class, 'review'])->name('bookings.review');
+    });
+
+    // ==========================================
+    // PROVIDER ONLY ROUTES (Prefix: /provider)
+    // ==========================================
+    Route::middleware([\App\Http\Middleware\RoleMiddleware::class.':provider'])->prefix('provider')->name('provider.')->group(function () {
+        Route::get('/dashboard', [\App\Http\Controllers\Web\ProviderDashboardController::class, 'index'])->name('dashboard');
+        
+        // Provider Profile (/provider/profile)
+        Route::get('/profile', [\App\Http\Controllers\Web\ProfileController::class, 'edit'])->name('profile.edit');
+        Route::post('/profile', [\App\Http\Controllers\Web\ProfileController::class, 'update'])->name('profile.update');
+        
+        // Provider Complaints (/provider/complaints)
+        Route::get('/complaints', [\App\Http\Controllers\Web\ComplaintController::class, 'index'])->name('complaints.index');
+        Route::get('/bookings/{booking}/complaints/create', [\App\Http\Controllers\Web\ComplaintController::class, 'create'])->name('complaints.create');
+        Route::post('/bookings/{booking}/complaints', [\App\Http\Controllers\Web\ComplaintController::class, 'store'])->name('complaints.store');
+        
+        // Provider Other Routes
+        Route::post('/leads/{lead}/interest', [\App\Http\Controllers\Web\ProviderDashboardController::class, 'expressInterest'])->name('leads.interest');
+        Route::post('/jobs/{job}/start', [\App\Http\Controllers\Web\ProviderJobController::class, 'start'])->name('jobs.start');
+        Route::post('/jobs/{job}/complete', [\App\Http\Controllers\Web\ProviderJobController::class, 'complete'])->name('jobs.complete');
+    });
+
 });
 
 // ==========================================
@@ -56,7 +86,9 @@ if (app()->environment('local')) {
         $user = \App\Models\User::findOrFail($id);
         auth()->login($user);
         
-        if ($user->role?->value === 'provider') {
+        $userRole = $user->role instanceof \BackedEnum ? $user->role->value : $user->role;
+        
+        if ($userRole === 'provider') {
             return redirect()->route('provider.dashboard')->with('success', 'Logged in as Provider: ' . $user->name);
         }
         

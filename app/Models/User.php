@@ -20,8 +20,6 @@ class User extends Authenticatable implements FilamentUser
 
     protected $guarded = [
         'id',
-        'role',
-        'status',
         'email_verified_at',
         'mobile_verified_at',
         'suspension_reason',

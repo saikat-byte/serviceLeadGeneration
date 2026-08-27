@@ -61,7 +61,8 @@ class UserResource extends Resource
             TextInput::make('mobile')
                 ->label('Mobile Number')
                 ->tel()
-                ->maxLength(20),
+                ->maxLength(10)
+                ->unique(ignoreRecord: true),
 
             TextInput::make('password')
                 ->label(fn(string $operation): string => $operation === 'edit' ? 'New Password (leave blank to keep current)' : 'Password')
@@ -72,9 +73,14 @@ class UserResource extends Resource
                 ->maxLength(255),
 
             Select::make('role')
-                ->label('User Role')
-                ->options(UserRole::class)
-                ->required(),
+                ->label('User Role (Frontend)')
+                ->options([
+                    'customer' => 'Customer',
+                    'provider' => 'Provider',
+                    'admin' => 'Admin',
+                ])
+                ->required()
+                ->default('customer'),
 
             Select::make('status')
                 ->label('Account Status')
