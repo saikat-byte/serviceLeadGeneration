@@ -76,4 +76,38 @@ class User extends Authenticatable implements FilamentUser
         // Using ?->value safely checks the string value regardless of the Enum case name
         return $this->role?->value === 'admin';
     }
+
+    // ==================================================
+    // BATCH 20.1: PROVIDER READINESS & ONBOARDING LOGIC
+    // ==================================================
+    
+    public function isEligibleForLeads(): bool
+    {
+        $roleCheck = $this->role instanceof \BackedEnum ? $this->role->value : $this->role;
+        if ($roleCheck !== 'provider') return false;
+        
+        if (!$this->providerProfile) return false;
+        
+        // Must have at least one approved/active service
+        $hasServices = $this->providerServices()->whereIn('status', ['active', 'approved'])->exists();
+        if (!$hasServices) return false;
+        
+        if ($this->providerServiceAreas()->count() === 0) return false;
+        
+        // Depending on strict business logic, availability might be required
+        if ($this->providerAvailabilities()->count() === 0) return false;
+        
+        return true;
+    }
+
+    public function onboardingProgress(): array
+    {
+        return [
+            'profile' => (bool) $this->providerProfile,
+            'services' => $this->providerServices()->exists(),
+            'skills' => $this->providerSkills()->exists(),
+            'areas' => $this->providerServiceAreas()->exists(),
+            'availability' => $this->providerAvailabilities()->exists(),
+        ];
+    }
 }

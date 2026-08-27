@@ -1,19 +1,27 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Web\AuthController;
-use App\Http\Controllers\Web\HomeController;
+use App\Http\Controllers\Web\CustomerBookingController;
 use App\Http\Controllers\Web\CustomerDashboardController;
-use App\Http\Controllers\Web\ServiceController;
-use App\Http\Controllers\Web\LocationController;
 use App\Http\Controllers\Web\CustomerServiceRequestController;
+use App\Http\Controllers\Web\HomeController;
+use App\Http\Controllers\Web\LocationController;
+use App\Http\Controllers\Web\ProviderController;
 use App\Http\Controllers\Web\ProviderDashboardController;
 use App\Http\Controllers\Web\ProviderJobController;
-use App\Http\Controllers\Web\CustomerBookingController;
+use App\Http\Controllers\Web\ServiceCategoryController;
+use App\Http\Controllers\Web\ServiceController;
 use App\Http\Middleware\RoleMiddleware;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
+Route::get('/services/category/{slug}', [ServiceCategoryController::class, 'show'])->name('categories.show');
 Route::get('/services/{slug}', [ServiceController::class, 'show'])->name('services.show');
+
+// Batch 19: Public Provider Directory & Profiles
+Route::get('/providers', [ProviderController::class, 'index'])->name('providers.index');
+Route::get('/providers/{user}', [ProviderController::class, 'show'])->name('providers.show');
 Route::view('/how-it-works', 'pages.how-it-works')->name('how-it-works');
 
 Route::get('/login', function () {
@@ -32,6 +40,8 @@ Route::middleware('auth')->group(function () {
     // ==========================================
     Route::middleware([\App\Http\Middleware\RoleMiddleware::class.':customer'])->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\Web\CustomerDashboardController::class, 'index'])->name('dashboard');
+        
+
         
         // Customer Profile
         Route::get('/profile', [\App\Http\Controllers\Web\ProfileController::class, 'edit'])->name('customer.profile.edit');
@@ -59,8 +69,32 @@ Route::middleware('auth')->group(function () {
     // PROVIDER ONLY ROUTES (Prefix: /provider)
     // ==========================================
     Route::middleware([\App\Http\Middleware\RoleMiddleware::class.':provider'])->prefix('provider')->name('provider.')->group(function () {
+        
         Route::get('/dashboard', [\App\Http\Controllers\Web\ProviderDashboardController::class, 'index'])->name('dashboard');
         
+        // ---- BATCH 20.1: PROVIDER ONBOARDING ROUTES ----
+        Route::prefix('onboarding')->name('onboarding.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Web\ProviderOnboardingController::class, 'index'])->name('index');
+            
+            Route::get('/profile', [\App\Http\Controllers\Web\ProviderOnboardingController::class, 'stepProfile'])->name('profile');
+            Route::post('/profile', [\App\Http\Controllers\Web\ProviderOnboardingController::class, 'saveProfile'])->name('profile.save');
+            
+            Route::get('/services', [\App\Http\Controllers\Web\ProviderOnboardingController::class, 'stepServices'])->name('services');
+            Route::post('/services', [\App\Http\Controllers\Web\ProviderOnboardingController::class, 'saveServices'])->name('services.save');
+            
+            Route::get('/skills', [\App\Http\Controllers\Web\ProviderOnboardingController::class, 'stepSkills'])->name('skills');
+            Route::post('/skills', [\App\Http\Controllers\Web\ProviderOnboardingController::class, 'saveSkills'])->name('skills.save');
+            
+            Route::get('/areas', [\App\Http\Controllers\Web\ProviderOnboardingController::class, 'stepAreas'])->name('areas');
+            Route::post('/areas', [\App\Http\Controllers\Web\ProviderOnboardingController::class, 'saveAreas'])->name('areas.save');
+            
+            Route::get('/availability', [\App\Http\Controllers\Web\ProviderOnboardingController::class, 'stepAvailability'])->name('availability');
+            Route::post('/availability', [\App\Http\Controllers\Web\ProviderOnboardingController::class, 'saveAvailability'])->name('availability.save');
+            
+            Route::get('/review', [\App\Http\Controllers\Web\ProviderOnboardingController::class, 'stepReview'])->name('review');
+        });
+        // ------------------------------------------------
+
         // Provider Profile (/provider/profile)
         Route::get('/profile', [\App\Http\Controllers\Web\ProfileController::class, 'edit'])->name('profile.edit');
         Route::post('/profile', [\App\Http\Controllers\Web\ProfileController::class, 'update'])->name('profile.update');

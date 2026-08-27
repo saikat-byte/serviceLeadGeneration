@@ -8,6 +8,8 @@ use App\Models\Booking;
 use App\Models\Interest;
 use App\Models\ServiceRequest;
 use App\Models\User;
+use App\Services\Marketplace\MatchingEngine;
+use App\Services\Marketplace\LeadDistributionService; // <-- ADDED THIS
 use App\Notifications\BookingConfirmedNotification;
 use App\Services\InterestService;
 use App\Services\JobService;
@@ -23,7 +25,8 @@ class CustomerServiceRequestController extends Controller
         protected LeadService $leadService
     ) {}
 
-    public function store(StoreServiceRequest $request)
+    // INJECTED LeadDistributionService
+    public function store(StoreServiceRequest $request, MatchingEngine $matchingEngine, LeadDistributionService $distributionService)
     {
         $serviceRequest = ServiceRequest::create([
             'customer_id' => $request->user()->id,
@@ -32,7 +35,17 @@ class CustomerServiceRequestController extends Controller
 
         $this->serviceRequestService->submit($serviceRequest, $request->user()->id);
         $this->serviceRequestService->qualify($serviceRequest, $request->user()->id);
+        
+        // This acts as a fallback or pre-cursor depending on existing logic
         $this->leadService->createFromRequest($serviceRequest);
+
+        // BATCH 20.2: Trigger Matching Engine Synchronously
+        $lead = $matchingEngine->process($serviceRequest);
+
+        // BATCH 20.3: Distribute the lead to eligible providers
+        if ($lead) {
+            $distributionService->distribute($lead);
+        }
 
         return redirect()->route('dashboard')->with('success', 'Service request submitted successfully! We are matching you with the best professionals.');
     }
