@@ -37,12 +37,20 @@ class ProviderDashboardController extends Controller
         return view('provider.dashboard', compact('leads', 'activeJobs'));
     }
 
-    public function expressInterest(Lead $lead, InterestService $interestService)
+    public function expressInterest(Lead $lead, \App\Services\InterestService $interestService)
     {
-        $provider = Auth::user();
+        $provider = \Illuminate\Support\Facades\Auth::user();
 
         try {
             $interestService->expressInterest($lead, $provider->id);
+            
+            // --- NOTIFICATION LOGIC ---
+            $customer = $lead->serviceRequest->customer;
+            if ($customer) {
+                $customer->notify(new \App\Notifications\ProviderInterestedNotification($lead, $provider));
+            }
+            // --------------------------
+
             return back()->with('success', 'You have expressed interest! Waiting for the customer to confirm.');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());

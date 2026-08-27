@@ -4,14 +4,15 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreServiceRequest;
-use App\Models\ServiceRequest;
-use App\Models\Interest;
 use App\Models\Booking;
+use App\Models\Interest;
+use App\Models\ServiceRequest;
 use App\Models\User;
-use App\Services\ServiceRequestService;
-use App\Services\LeadService;
+use App\Notifications\BookingConfirmedNotification;
 use App\Services\InterestService;
 use App\Services\JobService;
+use App\Services\LeadService;
+use App\Services\ServiceRequestService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -86,6 +87,9 @@ class CustomerServiceRequestController extends Controller
 
             // 4. Update Connection State
             $connection->transitionState('active', 'BookingCreated', $user->id, 'Customer confirmed the booking.');
+
+            $provider->notify(new BookingConfirmedNotification($booking, 'provider'));
+            $user->notify(new BookingConfirmedNotification($booking, 'customer'));
 
             return redirect()->route('dashboard')->with('success', 'Booking confirmed successfully with ' . $connection->provider->name . '!');
         });

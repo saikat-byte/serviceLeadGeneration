@@ -15,7 +15,6 @@ class BookingConfirmedNotification extends Notification
 
     public function via(object $notifiable): array
     {
-        // Ekhane 'mail' add kora holo jate database er pashapashi email o jay
         return ['database', 'mail'];
     }
 
@@ -23,7 +22,6 @@ class BookingConfirmedNotification extends Notification
     {
         $role = $this->recipientType === 'customer' ? 'provider' : 'customer';
         
-        // Frontend URL path (eta pore apnar frontend route onujayi change korte paren)
         $url = url('/bookings/' . $this->booking->id); 
         
         return (new MailMessage)
@@ -42,6 +40,7 @@ class BookingConfirmedNotification extends Notification
         return [
             'title' => 'Booking Confirmed',
             'message' => "Your booking has been successfully confirmed with the {$role}.",
+            'link' => '/bookings/' . $this->booking->id,
             'booking_id' => $this->booking->id,
         ];
     }
