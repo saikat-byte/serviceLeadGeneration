@@ -7,7 +7,6 @@ namespace App\Policies;
 use Illuminate\Foundation\Auth\User as AuthUser;
 use App\Models\Booking;
 use Illuminate\Auth\Access\HandlesAuthorization;
-use App\Enums\UserRole;
 
 class BookingPolicy
 {
@@ -15,8 +14,7 @@ class BookingPolicy
     
     public function viewAny(AuthUser $authUser): bool
     {
-        // Customers and Providers can view their own booking lists
-        if (in_array($authUser->role, [UserRole::Customer, UserRole::Provider])) {
+        if (in_array($authUser->role?->value, ['customer', 'provider'])) {
             return true;
         }
         return $authUser->can('ViewAny:Booking');
@@ -24,11 +22,10 @@ class BookingPolicy
 
     public function view(AuthUser $authUser, Booking $booking): bool
     {
-        // Ownership check
-        if ($authUser->role === UserRole::Customer) {
+        if ($authUser->role?->value === 'customer') {
             return $authUser->id === $booking->customer_id;
         }
-        if ($authUser->role === UserRole::Provider) {
+        if ($authUser->role?->value === 'provider') {
             return $authUser->id === $booking->provider_id;
         }
         return $authUser->can('View:Booking');
@@ -36,8 +33,7 @@ class BookingPolicy
 
     public function create(AuthUser $authUser): bool
     {
-        // Only customers can initiate bookings
-        if ($authUser->role === UserRole::Customer) {
+        if ($authUser->role?->value === 'customer') {
             return true;
         }
         return $authUser->can('Create:Booking');
@@ -45,14 +41,11 @@ class BookingPolicy
 
     public function update(AuthUser $authUser, Booking $booking): bool
     {
-        // Users should NOT update booking fields manually. 
-        // State transitions handle this via services.
         return $authUser->can('Update:Booking');
     }
 
     public function delete(AuthUser $authUser, Booking $booking): bool
     {
-        // Users cannot hard delete bookings. They must cancel them.
         return $authUser->can('Delete:Booking');
     }
 

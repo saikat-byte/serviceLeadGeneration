@@ -73,9 +73,9 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(ProviderAvailability::class, 'provider_id');
     }
 
-    // Strictly check base UserRole to prevent unauthorized Filament access
-    public function canAccessPanel(Panel $panel): bool
+    public function canAccessPanel(\Filament\Panel $panel): bool
     {
-        return $this->role === UserRole::Admin;
+        // Using ?->value safely checks the string value regardless of the Enum case name
+        return $this->role?->value === 'admin';
     }
 }

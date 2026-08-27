@@ -5,18 +5,18 @@ namespace App\Filament\Resources\Verifications;
 use App\Enums\VerificationStatus;
 use App\Filament\Resources\Verifications\Pages;
 use App\Models\Verification;
+use Filament\Actions\Action;
 use Filament\Actions\ViewAction as PageViewAction; // Avoid naming conflict
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Tables\Actions\Action;
-use Filament\Tables\Actions\ViewAction;
+use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Filament\Notifications\Notification;
 
 class VerificationResource extends Resource
 {

@@ -7,7 +7,6 @@ namespace App\Policies;
 use Illuminate\Foundation\Auth\User as AuthUser;
 use App\Models\ServiceRequest;
 use Illuminate\Auth\Access\HandlesAuthorization;
-use App\Enums\UserRole;
 
 class ServiceRequestPolicy
 {
@@ -15,8 +14,7 @@ class ServiceRequestPolicy
     
     public function viewAny(AuthUser $authUser): bool
     {
-        // Customers can view their own list
-        if ($authUser->role === UserRole::Customer) {
+        if ($authUser->role?->value === 'customer') {
             return true;
         }
         return $authUser->can('ViewAny:ServiceRequest');
@@ -24,8 +22,7 @@ class ServiceRequestPolicy
 
     public function view(AuthUser $authUser, ServiceRequest $serviceRequest): bool
     {
-        // Ownership check for customers
-        if ($authUser->role === UserRole::Customer) {
+        if ($authUser->role?->value === 'customer') {
             return $authUser->id === $serviceRequest->customer_id;
         }
         return $authUser->can('View:ServiceRequest');
@@ -33,8 +30,7 @@ class ServiceRequestPolicy
 
     public function create(AuthUser $authUser): bool
     {
-        // Only customers create service requests via API
-        if ($authUser->role === UserRole::Customer) {
+        if ($authUser->role?->value === 'customer') {
             return true;
         }
         return $authUser->can('Create:ServiceRequest');
@@ -42,8 +38,7 @@ class ServiceRequestPolicy
 
     public function update(AuthUser $authUser, ServiceRequest $serviceRequest): bool
     {
-        // Customer can update only if it's draft or submitted (before processing)
-        if ($authUser->role === UserRole::Customer) {
+        if ($authUser->role?->value === 'customer') {
             return $authUser->id === $serviceRequest->customer_id 
                 && in_array($serviceRequest->status, ['draft', 'submitted']);
         }
@@ -52,8 +47,7 @@ class ServiceRequestPolicy
 
     public function delete(AuthUser $authUser, ServiceRequest $serviceRequest): bool
     {
-        // Prevent deletion if already processed, even for owners
-        if ($authUser->role === UserRole::Customer) {
+        if ($authUser->role?->value === 'customer') {
             return $authUser->id === $serviceRequest->customer_id 
                 && in_array($serviceRequest->status, ['draft', 'submitted']);
         }
