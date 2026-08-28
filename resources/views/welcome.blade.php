@@ -1,7 +1,7 @@
 <x-layouts.app title="ServEase | Premium Local Services at Your Doorstep">
-    
-    <!-- 01 & 02: Header/Nav is in App Layout, Hero Section -->
-    <x-home.hero />
+     
+    <!-- 01 & 02: Header/Nav is in App Layout, Hero Section -->  
+     <x-home.hero />
 
     <!-- 04: Service Categories Section -->
     <div id="services" class="bg-gray-50 py-16 sm:py-24">
@@ -41,7 +41,6 @@
                                 @endforelse
                             </ul>
                             
-                            <!-- Fixed: Using services_count from withCount() instead of eager loaded collection count -->
                             @if($category->services_count > 4)
                                 <!-- Fixed: Dead link replaced with actual valid route -->
                                 <a href="{{ route('services.index', ['category' => $category->id]) }}" class="mt-auto text-sm font-semibold text-amber-600 hover:text-amber-700">View all {{ $category->services_count }} services &rarr;</a>
@@ -90,8 +89,6 @@
                         @if($provider->experience_years)
                             <p class="text-xs text-gray-500 mt-2">{{ $provider->experience_years }} Years Experience</p>
                         @endif
-                        
-                        <!-- Fixed: Removed dead href="#" link. Public Provider Profile route is a future batch requirement -->
                     </div>
                 @endforeach
             </div>
@@ -114,7 +111,6 @@
                             @endfor
                         </div>
                         
-                        <!-- Fixed: Removed fake text generation. Only show comment if it exists -->
                         @if($review->comment)
                             <p class="text-gray-600 text-sm italic mb-4">"{{ Str::limit($review->comment, 100) }}"</p>
                         @else
